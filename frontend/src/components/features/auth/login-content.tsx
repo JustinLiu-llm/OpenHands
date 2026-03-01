@@ -12,6 +12,7 @@ import { TermsAndPrivacyNotice } from "#/components/shared/terms-and-privacy-not
 import { useRecaptcha } from "#/hooks/use-recaptcha";
 import { useConfig } from "#/hooks/query/use-config";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
+import { EmailAuthForm } from "./email-auth-form";
 
 export interface LoginContentProps {
   githubAuthUrl: string | null;
@@ -41,6 +42,11 @@ export function LoginContent({
   const { t } = useTranslation();
   const { trackLoginButtonClick } = useTracking();
   const { data: config } = useConfig();
+
+  // Check if multi-user mode is enabled (localStorage auth)
+  const isMultiUserMode = localStorage.getItem("auth_token") !== null || 
+    providersConfigured === undefined || 
+    (providersConfigured && providersConfigured.length === 0);
 
   // reCAPTCHA - only need token generation, verification happens at backend callback
   const { isReady: recaptchaReady, executeRecaptcha } = useRecaptcha({
@@ -142,6 +148,26 @@ export function LoginContent({
     hasInvitation ||
     showBitbucket;
 
+  // Show email/password auth form if no providers configured (multi-user mode)
+  if (noProvidersConfigured) {
+    return (
+      <div
+        className="flex flex-col items-center w-full gap-12.5"
+        data-testid="login-content"
+      >
+        <div>
+          <OpenHandsLogoWhite width={106} height={72} />
+        </div>
+
+        <h1 className="text-[39px] leading-5 font-medium text-white text-center">
+          {t(I18nKey.AUTH$LETS_GET_STARTED)}
+        </h1>
+
+        <EmailAuthForm />
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex flex-col items-center w-full gap-12.5"
@@ -186,52 +212,52 @@ export function LoginContent({
       )}
 
       <div className="flex flex-col items-center gap-3">
-        {noProvidersConfigured ? (
-          <div className="text-center p-4 text-muted-foreground">
-            {t(I18nKey.AUTH$NO_PROVIDERS_CONFIGURED)}
-          </div>
-        ) : (
-          <>
-            {showGithub && (
-              <button
-                type="button"
-                onClick={handleGitHubAuth}
-                className={`${buttonBaseClasses} bg-[#9E28B0] text-white`}
-              >
-                <GitHubLogo width={14} height={14} className="shrink-0" />
-                <span className={buttonLabelClasses}>
-                  {t(I18nKey.GITHUB$CONNECT_TO_GITHUB)}
-                </span>
-              </button>
-            )}
-
-            {showGitlab && (
-              <button
-                type="button"
-                onClick={handleGitLabAuth}
-                className={`${buttonBaseClasses} bg-[#FC6B0E] text-white`}
-              >
-                <GitLabLogo width={14} height={14} className="shrink-0" />
-                <span className={buttonLabelClasses}>
-                  {t(I18nKey.GITLAB$CONNECT_TO_GITLAB)}
-                </span>
-              </button>
-            )}
-
-            {showBitbucket && (
-              <button
-                type="button"
-                onClick={handleBitbucketAuth}
-                className={`${buttonBaseClasses} bg-[#2684FF] text-white`}
-              >
-                <BitbucketLogo width={14} height={14} className="shrink-0" />
-                <span className={buttonLabelClasses}>
-                  {t(I18nKey.BITBUCKET$CONNECT_TO_BITBUCKET)}
-                </span>
-              </button>
-            )}
-          </>
+        {showGithub && (
+          <button
+            type="button"
+            onClick={handleGitHubAuth}
+            className={`${buttonBaseClasses} bg-[#9E28B0] text-white`}
+          >
+            <GitHubLogo width={14} height={14} className="shrink-0" />
+            <span className={buttonLabelClasses}>
+              {t(I18nKey.GITHUB$CONNECT_TO_GITHUB)}
+            </span>
+          </button>
         )}
+
+        {showGitlab && (
+          <button
+            type="button"
+            onClick={handleGitLabAuth}
+            className={`${buttonBaseClasses} bg-[#FC6B0E] text-white`}
+          >
+            <GitLabLogo width={14} height={14} className="shrink-0" />
+            <span className={buttonLabelClasses}>
+              {t(I18nKey.GITLAB$CONNECT_TO_GITLAB)}
+            </span>
+          </button>
+        )}
+
+        {showBitbucket && (
+          <button
+            type="button"
+            onClick={handleBitbucketAuth}
+            className={`${buttonBaseClasses} bg-[#2684FF] text-white`}
+          >
+            <BitbucketLogo width={14} height={14} className="shrink-0" />
+            <span className={buttonLabelClasses}>
+              {t(I18nKey.BITBUCKET$CONNECT_TO_BITBUCKET)}
+            </span>
+          </button>
+        )}
+
+        {/* Also show email/password option */}
+        <div className="mt-4 pt-4 border-t border-gray-600 w-full">
+          <p className="text-sm text-gray-400 text-center mb-3">
+            Or sign in with email
+          </p>
+          <EmailAuthForm />
+        </div>
       </div>
 
       <TermsAndPrivacyNotice className="max-w-[320px] text-[#A3A3A3]" />

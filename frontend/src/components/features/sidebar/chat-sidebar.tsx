@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router";
 import { cn } from "#/utils/utils";
+import { useAuth } from "#/hooks/use-auth";
 
 // Simple SVG Icons
 const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -51,11 +52,17 @@ interface Conversation {
 export function ChatSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const [historyExpanded] = React.useState(true);
 
   // Mock conversations - will be replaced with real data
   const mockConversations: Conversation[] = [];
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <aside
@@ -137,9 +144,18 @@ export function ChatSidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-              User
+              {isAuthenticated && user ? user.username : "User"}
             </p>
           </div>
+          {isAuthenticated && (
+            <button
+              onClick={handleLogout}
+              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+              title="Logout"
+            >
+              <LogOutIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            </button>
+          )}
         </div>
       </div>
     </aside>

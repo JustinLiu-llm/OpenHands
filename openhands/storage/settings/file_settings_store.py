@@ -36,10 +36,6 @@ class FileSettingsStore(SettingsStore):
             json_str = await call_sync_from_async(self.file_store.read, self.path)
             kwargs = json.loads(json_str)
             
-            # 如果是用户隔离模式，补充 user_id
-            if self.user_id and 'user_id' not in kwargs:
-                kwargs['user_id'] = self.user_id
-            
             settings = Settings(**kwargs)
 
             # Turn on V1 in OpenHands
@@ -56,10 +52,7 @@ class FileSettingsStore(SettingsStore):
             return None
 
     async def store(self, settings: Settings) -> None:
-        # 确保 user_id 被保存
-        if self.user_id:
-            settings.user_id = self.user_id
-        
+        # 注意：user_id 不需要保存在 Settings 中，因为已经通过目录路径隔离了
         json_str = settings.model_dump_json(context={'expose_secrets': True})
         await call_sync_from_async(self.file_store.write, self.path, json_str)
 
