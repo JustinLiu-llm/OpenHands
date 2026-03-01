@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 
 from openhands.core.config.openhands_config import OpenHandsConfig
+from openhands.core.logger import openhands_logger as logger
 from openhands.storage import get_file_store
 from openhands.storage.data_models.settings import Settings
 from openhands.storage.files import FileStore
@@ -11,15 +13,33 @@ from openhands.storage.settings.settings_store import SettingsStore
 from openhands.utils.async_utils import call_sync_from_async
 
 
+# 用户隔离的配置目录
+def get_user_config_path(user_id: str | None, config: OpenHandsConfig) -> str:
+    """获取用户隔离的配置路径"""
+    if user_id:
+        # 用户隔离目录: ~/.openhands/users/{user_id}/.openhands
+        base_path = os.path.expanduser(config.file_store_path or "~/.openhands")
+        return os.path.join(base_path, "users", user_id, ".openhands")
+    else:
+        # 全局配置（兼容旧模式）: ~/.openhands
+        return os.path.expanduser(config.file_store_path or "~/.openhands")
+
+
 @dataclass
 class FileSettingsStore(SettingsStore):
     file_store: FileStore
     path: str = 'settings.json'
+    user_id: str | None = None
 
     async def load(self) -> Settings | None:
         try:
             json_str = await call_sync_from_async(self.file_store.read, self.path)
             kwargs = json.loads(json_str)
+            
+            # 如果是用户隔离模式，补充 user_id
+            if self.user_id and 'user_id' not in kwargs:
+                kwargs['user_id'] = self.user_id
+            
             settings = Settings(**kwargs)
 
             # Turn on V1 in OpenHands
@@ -28,9 +48,18 @@ class FileSettingsStore(SettingsStore):
 
             return settings
         except FileNotFoundError:
+            if self.user_id:
+                logger.warning(f"User settings not found for user: {self.user_id}")
+            return None
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse settings: {e}")
             return None
 
     async def store(self, settings: Settings) -> None:
+        # 确保 user_id 被保存
+        if self.user_id:
+            settings.user_id = self.user_id
+        
         json_str = settings.model_dump_json(context={'expose_secrets': True})
         await call_sync_from_async(self.file_store.write, self.path, json_str)
 
@@ -38,11 +67,21 @@ class FileSettingsStore(SettingsStore):
     async def get_instance(
         cls, config: OpenHandsConfig, user_id: str | None
     ) -> FileSettingsStore:
+        # 获取用户隔离的文件存储路径
+        user_config_path = get_user_config_path(user_id, config)
+        
+        logger.info(f"Creating FileSettingsStore for user_id={user_id}, path={user_config_path}")
+        
         file_store = get_file_store(
             file_store_type=config.file_store,
-            file_store_path=config.file_store_path,
+            file_store_path=user_config_path,
             file_store_web_hook_url=config.file_store_web_hook_url,
             file_store_web_hook_headers=config.file_store_web_hook_headers,
             file_store_web_hook_batch=config.file_store_web_hook_batch,
         )
-        return FileSettingsStore(file_store)
+        
+        # 确保目录存在
+        import os
+        os.makedirs(user_config_path, exist_ok=True)
+        
+        return FileSettingsStore(file_store=file_store, user_id=user_id)

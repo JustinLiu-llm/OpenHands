@@ -40,6 +40,8 @@ from openhands.server.routes.secrets import app as secrets_router
 from openhands.server.routes.security import app as security_api_router
 from openhands.server.routes.settings import app as settings_router
 from openhands.server.routes.trajectory import app as trajectory_router
+# 新增多用户认证路由
+from openhands.server.routes.auth import app as auth_router
 from openhands.server.shared import conversation_manager, server_config
 from openhands.server.types import AppMode
 from openhands.version import get_version
@@ -89,6 +91,7 @@ async def authentication_error_handler(request: Request, exc: AuthenticationErro
 
 
 app.include_router(public_api_router)
+app.include_router(auth_router)  # 新增认证路由
 app.include_router(files_api_router)
 app.include_router(security_api_router)
 app.include_router(feedback_api_router)

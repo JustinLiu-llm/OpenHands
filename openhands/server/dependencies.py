@@ -1,21 +1,22 @@
 # IMPORTANT: LEGACY V0 CODE - Deprecated since version 1.0.0, scheduled for removal April 1, 2026
 # This file is part of the legacy (V0) implementation of OpenHands and will be removed soon as we complete the migration to V1.
 # OpenHands V1 uses the Software Agent SDK for the agentic core and runs a new application server. Please refer to:
-#   - V1 agentic core (SDK): https://github.com/OpenHands/software-agent-sdk
 #   - V1 application server (in this repo): openhands/app_server/
-# Unless you are working on deprecation, please avoid extending this legacy file and consult the V1 codepaths above.
+# Unless you are working on deprecation, please consult the V1 codepaths above.
 # Tag: Legacy-V0
-# This module belongs to the old V0 web server. The V1 application server lives under openhands/app_server/.
 import os
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import APIKeyHeader
+from fastapi.security import APIKeyHeader, HTTPBearer, HTTPAuthorizationCredentials
 
 from openhands.app_server.config import get_global_config
 from openhands.server.types import AppMode
+from openhands.server.services.auth_service import verify_jwt, TokenData
+
 
 _SESSION_API_KEY = os.getenv('SESSION_API_KEY')
 _SESSION_API_KEY_HEADER = APIKeyHeader(name='X-Session-API-Key', auto_error=False)
+_jwt_bearer = HTTPBearer(auto_error=False)
 
 
 def check_session_api_key(
@@ -26,6 +27,30 @@ def check_session_api_key(
     """
     if session_api_key != _SESSION_API_KEY:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+
+
+async def get_current_user_from_jwt(
+    credentials: HTTPAuthorizationCredentials = Depends(_jwt_bearer)
+) -> TokenData | None:
+    """从 JWT Token 获取当前用户（可选认证）"""
+    if not credentials:
+        return None
+    try:
+        return verify_jwt(credentials.credentials)
+    except:
+        return None
+
+
+async def get_required_user_from_jwt(
+    credentials: HTTPAuthorizationCredentials = Depends(_jwt_bearer)
+) -> TokenData:
+    """从 JWT Token 获取当前用户（必须认证）"""
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    return verify_jwt(credentials.credentials)
 
 
 def get_dependencies() -> list[Depends]:
