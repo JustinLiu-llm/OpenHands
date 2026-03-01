@@ -79,9 +79,7 @@ class JWTUserAuth(UserAuth):
         return settings_store
 
     async def get_user_settings(self) -> Settings | None:
-        settings = self._settings
-        if settings:
-            return settings
+        # 每次都重新读取，不缓存
         settings_store = await self.get_user_settings_store()
         settings = await settings_store.load()
 
@@ -89,7 +87,6 @@ class JWTUserAuth(UserAuth):
         if settings:
             settings = settings.merge_with_config_settings()
 
-        self._settings = settings
         return settings
 
     async def get_secrets_store(self) -> SecretsStore:

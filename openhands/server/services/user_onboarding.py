@@ -39,17 +39,10 @@ class UserOnboardingService:
         for subdir in self.USER_SUBDIRS:
             (user_base / subdir).mkdir(exist_ok=True)
         
-        # 3. 复制默认配置或创建默认配置
-        default_dir = Path(os.path.expanduser(self.DEFAULT_CONFIG_DIR))
+        # 3. 直接创建默认配置（不使用全局配置，确保每个用户独立）
         for filename in self.DEFAULT_FILES:
-            src = default_dir / filename
             dst = user_base / ".openhands" / filename
-            if src.exists():
-                # 复制并更新配置
-                await self._copy_and_update_config(src, dst, user_id, email)
-            else:
-                # 使用内置默认配置
-                await self._create_default_config(dst, user_id, email)
+            await self._create_default_config(dst, user_id, email)
         
         # 4. 记录用户元数据
         await self._save_user_metadata(user_id, email)

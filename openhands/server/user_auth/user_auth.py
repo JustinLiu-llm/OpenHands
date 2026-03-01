@@ -99,15 +99,12 @@ class UserAuth(ABC):
 
 
 async def get_user_auth(request: Request) -> UserAuth:
-    user_auth: UserAuth | None = getattr(request.state, 'user_auth', None)
-    if user_auth:
-        return user_auth
+    # 每次请求都创建新的实例，避免用户配置混淆
     impl_name = server_config.user_auth_class
     impl = get_impl(UserAuth, impl_name)
     user_auth = await impl.get_instance(request)
     if user_auth is None:
         raise ValueError('Failed to get user auth instance')
-    request.state.user_auth = user_auth
     return user_auth
 
 

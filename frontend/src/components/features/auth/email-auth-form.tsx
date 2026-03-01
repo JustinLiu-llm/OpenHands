@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "#/hooks/use-auth";
 import { displayErrorToast, displaySuccessToast } from "#/utils/custom-toast-handlers";
@@ -15,10 +15,11 @@ export function EmailAuthForm() {
   const [mode, setMode] = useState<"login" | "register">("login");
 
   // Redirect if already authenticated
-  if (isAuthenticated) {
-    navigate("/", { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,10 +43,6 @@ export function EmailAuthForm() {
         await register({ email, username, password });
         displaySuccessToast("Registration successful!");
       }
-      // Use replace to avoid going back to login
-      setTimeout(() => {
-        navigate("/", { replace: true });
-      }, 500);
     } catch (error: unknown) {
       console.error("Auth error:", error);
       const err = error as { response?: { data?: { detail?: string } } };
@@ -125,7 +122,7 @@ export function EmailAuthForm() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               minLength={6}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark- border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder="••••••••"
             />
           </div>
