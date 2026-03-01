@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,9 +26,18 @@ from openhands.utils.search_utils import offset_to_page_id, page_id_to_offset
 conversation_metadata_type_adapter = TypeAdapter(ConversationMetadata)
 
 
+# 用户隔离的对话基础目录
+def get_user_conversation_base_dir(user_id: str | None) -> str:
+    """获取用户隔离的对话基础目录"""
+    if user_id:
+        return f'users/{user_id}/sessions'
+    return CONVERSATION_BASE_DIR
+
+
 @dataclass
 class FileConversationStore(ConversationStore):
     file_store: FileStore
+    user_id: str | None = None
 
     async def save_metadata(self, metadata: ConversationMetadata) -> None:
         json_str = conversation_metadata_type_adapter.dump_json(metadata)
@@ -96,23 +106,40 @@ class FileConversationStore(ConversationStore):
         return ConversationMetadataResultSet(conversations, next_page_id)
 
     def get_conversation_metadata_dir(self) -> str:
-        return CONVERSATION_BASE_DIR
+        # 使用用户隔离的目录
+        base_dir = get_user_conversation_base_dir(self.user_id)
+        return f'{base_dir}/'
 
     def get_conversation_metadata_filename(self, conversation_id: str) -> str:
-        return get_conversation_metadata_filename(conversation_id)
+        # 使用用户隔离的目录
+        base_dir = get_user_conversation_base_dir(self.user_id)
+        return f'{base_dir}/{conversation_id}/metadata.json'
 
     @classmethod
     async def get_instance(
         cls, config: OpenHandsConfig, user_id: str | None
     ) -> FileConversationStore:
+        # 获取用户隔离的文件存储路径
+        if user_id:
+            base_path = os.path.expanduser(config.file_store_path or "~/.openhands")
+            user_store_path = os.path.join(base_path, "users", user_id)
+        else:
+            user_store_path = os.path.expanduser(config.file_store_path or "~/.openhands")
+        
+        logger.info(f"Creating FileConversationStore for user_id={user_id}, path={user_store_path}")
+        
         file_store = get_file_store(
             file_store_type=config.file_store,
-            file_store_path=config.file_store_path,
+            file_store_path=user_store_path,
             file_store_web_hook_url=config.file_store_web_hook_url,
             file_store_web_hook_headers=config.file_store_web_hook_headers,
             file_store_web_hook_batch=config.file_store_web_hook_batch,
         )
-        return FileConversationStore(file_store)
+        
+        # 确保目录存在
+        os.makedirs(user_store_path, exist_ok=True)
+        
+        return FileConversationStore(file_store=file_store, user_id=user_id)
 
 
 def _sort_key(conversation: ConversationMetadata) -> str:

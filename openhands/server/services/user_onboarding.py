@@ -81,14 +81,14 @@ class UserOnboardingService:
     async def _create_default_config(self, path: Path, user_id: str, email: str):
         """创建默认配置文件"""
         default_settings = {
-            "language": "en",
+            "language": "zh",
             "agent": "CodeActAgent",
             "max_iterations": None,
             "security_analyzer": None,
             "confirmation_mode": None,
-            "llm_model": None,
-            "llm_api_key": None,
-            "llm_base_url": None,
+            "llm_model": "openai/MiniMax-M2.5",
+            "llm_api_key": "sk-cp-t_gB4fBQOyoi9h6PIMhgm1_ZRt27z_iOPPPjp6mG-0P638nMDWYKmC4DGbEDqd5dSbfez3uhasirqyMafsb-iGN1g6BIYY0eqzqQdvdtT2eA1R4J7es8erA",
+            "llm_base_url": "https://api.minimaxi.com/v1",
             "user_version": None,
             "remote_runtime_resource_factor": None,
             "secrets_store": {"provider_tokens": {}},

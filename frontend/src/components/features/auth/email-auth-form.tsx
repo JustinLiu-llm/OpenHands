@@ -6,17 +6,17 @@ import { displayErrorToast, displaySuccessToast } from "#/utils/custom-toast-han
 export function EmailAuthForm() {
   const navigate = useNavigate();
   const { login, register, isAuthenticated } = useAuth();
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [isLoading, setIsLoading] = useState(false);
 
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "register">("login");
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    navigate("/");
+    navigate("/", { replace: true });
     return null;
   }
 
@@ -42,8 +42,12 @@ export function EmailAuthForm() {
         await register({ email, username, password });
         displaySuccessToast("Registration successful!");
       }
-      navigate("/");
+      // Use replace to avoid going back to login
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 500);
     } catch (error: unknown) {
+      console.error("Auth error:", error);
       const err = error as { response?: { data?: { detail?: string } } };
       displayErrorToast(err.response?.data?.detail || "Authentication failed");
     } finally {

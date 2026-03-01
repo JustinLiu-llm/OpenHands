@@ -1,12 +1,8 @@
 import React from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { useIsAuthed } from "#/hooks/query/use-is-authed";
 import { useConfig } from "#/hooks/query/use-config";
-import { useGitHubAuthUrl } from "#/hooks/use-github-auth-url";
-import { useEmailVerification } from "#/hooks/use-email-verification";
-import { useInvitation } from "#/hooks/use-invitation";
-import { LoginContent } from "#/components/features/auth/login-content";
-import { EmailVerificationModal } from "#/components/features/waitlist/email-verification-modal";
+import { EmailAuthForm } from "#/components/features/auth/email-auth-form";
+import { useAuth } from "#/hooks/use-auth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -14,77 +10,36 @@ export default function LoginPage() {
   const returnTo = searchParams.get("returnTo") || "/";
 
   const config = useConfig();
-  const { data: isAuthed, isLoading: isAuthLoading } = useIsAuthed();
-  const {
-    emailVerified,
-    hasDuplicatedEmail,
-    recaptchaBlocked,
-    emailVerificationModalOpen,
-    setEmailVerificationModalOpen,
-    userId,
-  } = useEmailVerification();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
 
-  const { hasInvitation, buildOAuthStateData } = useInvitation();
-
-  const gitHubAuthUrl = useGitHubAuthUrl({
-    appMode: config.data?.app_mode || null,
-    authUrl: config.data?.auth_url,
-  });
-
-  // Redirect OSS mode users to home
+  // Redirect ONLY if authenticated with valid token
   React.useEffect(() => {
-    if (!config.isLoading && config.data?.app_mode === "oss") {
-      navigate("/", { replace: true });
-    }
-  }, [config.isLoading, config.data?.app_mode, navigate]);
-
-  // Redirect authenticated users away from login page
-  React.useEffect(() => {
-    if (!isAuthLoading && isAuthed) {
+    if (!authLoading && isAuthenticated && user) {
       navigate(returnTo, { replace: true });
     }
-  }, [isAuthed, isAuthLoading, navigate, returnTo]);
+  }, [isAuthenticated, authLoading, user, navigate, returnTo]);
 
-  if (isAuthLoading || config.isLoading) {
+  if (authLoading || config.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-base">
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
       </div>
     );
   }
 
-  // Don't render login content if user is authenticated or in OSS mode
-  if (isAuthed || config.data?.app_mode === "oss") {
+  // If already authenticated, don't show login form (will redirect)
+  if (isAuthenticated && user) {
     return null;
   }
 
+  // Show login form
   return (
-    <>
-      <main
-        className="min-h-screen flex items-center justify-center bg-base p-4"
-        data-testid="login-page"
-      >
-        <LoginContent
-          githubAuthUrl={gitHubAuthUrl}
-          appMode={config.data?.app_mode}
-          authUrl={config.data?.auth_url}
-          providersConfigured={config.data?.providers_configured}
-          emailVerified={emailVerified}
-          hasDuplicatedEmail={hasDuplicatedEmail}
-          recaptchaBlocked={recaptchaBlocked}
-          hasInvitation={hasInvitation}
-          buildOAuthStateData={buildOAuthStateData}
-        />
-      </main>
-
-      {emailVerificationModalOpen && (
-        <EmailVerificationModal
-          onClose={() => {
-            setEmailVerificationModalOpen(false);
-          }}
-          userId={userId}
-        />
-      )}
-    </>
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-white mb-2">OpenHands</h1>
+        <p className="text-gray-400">Sign in to continue</p>
+      </div>
+      <EmailAuthForm />
+    </div>
   );
 }
